@@ -1,5 +1,5 @@
 use crate::LdtkProject;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use ldtk::{EntityInstance, TileInstance};
 
 #[derive(Clone, Default, Debug)]
@@ -13,18 +13,9 @@ pub struct LdtkRenderBundle {
     global_transform: GlobalTransform,
 }
 
-#[non_exhaustive]
-pub struct AttachEnumsData<'a> {
-    project: &'a LdtkProject,
-    tileset_uid: i64,
-    tile: &'a TileInstance,
-}
-
-type AttachEnumsFunction = Box<dyn Fn(&mut EntityCommands, AttachEnumsData) + Send + Sync + 'static>;
 #[derive(Default)]
 pub struct LdtkProjectCfg {
     pub render_type: LdtkRenderType,
-    pub attach_enums: Option<AttachEnumsFunction>,
     pub rendered: Option<usize>,
 }
 
@@ -118,7 +109,15 @@ pub fn ldtk_entity_cleanup(
         }
     }
 }
-#[derive(Debug)]
+#[non_exhaustive]
+pub struct AttachEnumsEvent {
+    pub project: Handle<LdtkProject>,
+    pub tileset_uid: i64,
+    pub tile: TileInstance,
+    pub entity_id: Entity,
+}
+
+#[non_exhaustive]
 pub struct EntitySpawn {
     pub project: Handle<LdtkProject>,
     pub translation: Vec3,
@@ -131,6 +130,7 @@ pub fn render_ldtk_projects(
     mut commands: Commands,
     mut projects: Query<(&Handle<LdtkProject>, &mut LdtkProjectCfg, &Transform)>,
     mut entity_spawner: EventWriter<EntitySpawn>,
+    mut attach_enums: EventWriter<AttachEnumsEvent>,
     project_assets: Res<Assets<LdtkProject>>,
 ) {
     for (project_handle, mut project_cfg, transform) in projects.iter_mut() {
@@ -154,7 +154,7 @@ pub fn render_ldtk_projects(
                     project_handle,
                     project,
                     &mut entity_spawner,
-                    &project_cfg.attach_enums,
+                    &mut attach_enums,
                 );
 
                 project_cfg.rendered = Some(current);
@@ -178,7 +178,7 @@ pub fn render_ldtk_projects(
                         project_handle,
                         project,
                         &mut entity_spawner,
-                        &project_cfg.attach_enums,
+                        &mut attach_enums,
                     )
                 }
 
@@ -196,7 +196,7 @@ fn render_single_ldtk_level(
     project_handle: &Handle<LdtkProject>,
     project: &LdtkProject,
     entity_spawner: &mut EventWriter<EntitySpawn>,
-    attach_enums: &Option<AttachEnumsFunction>,
+    attach_enums: &mut EventWriter<AttachEnumsEvent>,
 ) {
     debug!(
         "Beginning render pass for project at level {} ({})",
@@ -249,6 +249,7 @@ fn render_single_ldtk_level(
                                     builder,
                                     project,
                                     tileset_uid,
+                                    project_handle.clone(),
                                     attach_enums,
                                 );
                             }
@@ -263,6 +264,7 @@ fn render_single_ldtk_level(
                                     builder,
                                     project,
                                     tileset_uid,
+                                    project_handle.clone(),
                                     attach_enums,
                                 );
                             }
@@ -271,7 +273,16 @@ fn render_single_ldtk_level(
                             Some(i) => {
                                 debug!("\t\t{} Generating IntGrid Layer w/ Tiles", idx);
                                 for tile in layer.auto_layer_tiles.iter() {
-                                    display_tile(&level_info, layer_info, tile, builder, project, i, attach_enums);
+                                    display_tile(
+                                        &level_info,
+                                        layer_info,
+                                        tile,
+                                        builder,
+                                        project,
+                                        i,
+                                        project_handle.clone(),
+                                        attach_enums,
+                                    );
                                 }
                             }
                             None => {
@@ -334,7 +345,8 @@ fn display_tile(
     builder: &mut ChildBuilder,
     project: &LdtkProject,
     tileset_uid: i64,
-    attach_enums: &Option<AttachEnumsFunction>,
+    project_handle: Handle<LdtkProject>,
+    attach_enums: &mut EventWriter<AttachEnumsEvent>,
 ) {
     let flip_x = (tile.f & 0b01) != 0;
     let flip_y = (tile.f & 0b10) != 0;
@@ -363,16 +375,12 @@ fn display_tile(
         ..Default::default()
     });
 
-    if let Some(f) = attach_enums {
-        f(
-            &mut commands,
-            AttachEnumsData {
-                project,
-                tileset_uid,
-                tile,
-            },
-        );
-    }
+    attach_enums.send(AttachEnumsEvent {
+        project: project_handle,
+        tileset_uid,
+        entity_id: commands.id(),
+        tile: (*tile).clone(),
+    });
 }
 
 fn display_entity(
