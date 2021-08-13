@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "ldtk",
+  "bevy_ldtk",
+  "tools/expand-yaml-anchors",
+]
