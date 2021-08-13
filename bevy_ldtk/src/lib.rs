@@ -4,7 +4,7 @@ mod assets;
 mod render;
 
 pub use assets::LdtkProject;
-pub use render::{EntitySpawn, LdtkProjectBundle, LdtkProjectCfg, LdtkRenderType};
+pub use render::{EntitySpawn, LdtkProjectBundle, LdtkProjectCfg, LdtkRenderType, AttachEnumsData};
 
 #[derive(Debug)]
 pub struct LdtkPlugin;

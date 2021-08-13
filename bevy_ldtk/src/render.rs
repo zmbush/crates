@@ -1,5 +1,5 @@
 use crate::LdtkProject;
-use bevy::prelude::*;
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use ldtk::{EntityInstance, TileInstance};
 
 #[derive(Clone, Default, Debug)]
@@ -13,9 +13,18 @@ pub struct LdtkRenderBundle {
     global_transform: GlobalTransform,
 }
 
+#[non_exhaustive]
+pub struct AttachEnumsData<'a> {
+    project: &'a LdtkProject,
+    tileset_uid: i64,
+    tile: &'a TileInstance,
+}
+
+type AttachEnumsFunction = Box<dyn Fn(&mut EntityCommands, AttachEnumsData) + Send + Sync + 'static>;
 #[derive(Default)]
 pub struct LdtkProjectCfg {
     pub render_type: LdtkRenderType,
+    pub attach_enums: Option<AttachEnumsFunction>,
     pub rendered: Option<usize>,
 }
 
@@ -145,6 +154,7 @@ pub fn render_ldtk_projects(
                     project_handle,
                     project,
                     &mut entity_spawner,
+                    &project_cfg.attach_enums,
                 );
 
                 project_cfg.rendered = Some(current);
@@ -168,6 +178,7 @@ pub fn render_ldtk_projects(
                         project_handle,
                         project,
                         &mut entity_spawner,
+                        &project_cfg.attach_enums,
                     )
                 }
 
@@ -185,6 +196,7 @@ fn render_single_ldtk_level(
     project_handle: &Handle<LdtkProject>,
     project: &LdtkProject,
     entity_spawner: &mut EventWriter<EntitySpawn>,
+    attach_enums: &Option<AttachEnumsFunction>,
 ) {
     debug!(
         "Beginning render pass for project at level {} ({})",
@@ -235,7 +247,9 @@ fn render_single_ldtk_level(
                                     layer_info,
                                     tile,
                                     builder,
-                                    project.spritesheets[&tileset_uid].clone(),
+                                    project,
+                                    tileset_uid,
+                                    attach_enums,
                                 );
                             }
                         }
@@ -247,7 +261,9 @@ fn render_single_ldtk_level(
                                     layer_info,
                                     tile,
                                     builder,
-                                    project.spritesheets[&tileset_uid].clone(),
+                                    project,
+                                    tileset_uid,
+                                    attach_enums,
                                 );
                             }
                         }
@@ -255,13 +271,7 @@ fn render_single_ldtk_level(
                             Some(i) => {
                                 debug!("\t\t{} Generating IntGrid Layer w/ Tiles", idx);
                                 for tile in layer.auto_layer_tiles.iter() {
-                                    display_tile(
-                                        &level_info,
-                                        layer_info,
-                                        tile,
-                                        builder,
-                                        project.spritesheets[&i].clone(),
-                                    );
+                                    display_tile(&level_info, layer_info, tile, builder, project, i, attach_enums);
                                 }
                             }
                             None => {
@@ -322,12 +332,17 @@ fn display_tile(
     layer_info: LayerInfo,
     tile: &TileInstance,
     builder: &mut ChildBuilder,
-    handle: Handle<TextureAtlas>,
+    project: &LdtkProject,
+    tileset_uid: i64,
+    attach_enums: &Option<AttachEnumsFunction>,
 ) {
     let flip_x = (tile.f & 0b01) != 0;
     let flip_y = (tile.f & 0b10) != 0;
 
-    builder.spawn().insert_bundle(SpriteSheetBundle {
+    let handle = project.spritesheets[&tileset_uid].clone();
+
+    let mut commands = builder.spawn();
+    commands.insert_bundle(SpriteSheetBundle {
         transform: Transform {
             translation: convert_to_world(
                 layer_info.grid_cell_size,
@@ -347,6 +362,17 @@ fn display_tile(
         texture_atlas: handle,
         ..Default::default()
     });
+
+    if let Some(f) = attach_enums {
+        f(
+            &mut commands,
+            AttachEnumsData {
+                project,
+                tileset_uid,
+                tile,
+            },
+        );
+    }
 }
 
 fn display_entity(
