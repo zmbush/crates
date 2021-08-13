@@ -1,6 +1,7 @@
 [package]
 authors = ["Pietro Albini <pietro@pietroalbini.org>"]
 edition = "2018"
+license = "MIT"
 name = "expand-yaml-anchors"
 version = "0.1.0"
 

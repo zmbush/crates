@@ -1,0 +1,79 @@
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+notice = "deny"
+unmaintained = "deny"
+vulnerability = "deny"
+yanked = "deny"
+
+[licenses]
+allow = [
+  "Apache-2.0",
+  "BSD-3-Clause",
+  "BSD-2-Clause",
+  "CC0-1.0",
+  "ISC",
+  "MIT",
+  "Zlib",
+]
+copyleft = "deny"
+deny = []
+unlicensed = "deny"
+# Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
+# * both - The license will be approved if it is both OSI-approved *AND* FSF
+# * either - The license will be approved if it is either OSI-approved *OR* FSF
+# * osi-only - The license will be approved if is OSI-approved *AND NOT* FSF
+# * fsf-only - The license will be approved if is FSF *AND NOT* OSI-approved
+# * neither - This predicate is ignored and the default lint level is used
+allow-osi-fsf-free = "neither"
+default = "deny"
+
+[[licenses.clarify]]
+expression = "MIT"
+license-files = []
+name = "stretch"
+
+[[licenses.clarify]] # Latest version has relicensed all code to MIT or Apache-2.0
+expression = "MIT OR Apache-2.0"
+license-files = []
+name = "hexasphere"
+
+[[licenses.clarify]] # https://github.com/gfx-rs/wgpu/issues/1473
+expression = "MIT OR Apache-2.0"
+license-files = []
+name = "wgpu-core"
+
+[[licenses.clarify]] # https://github.com/gfx-rs/wgpu/issues/1473
+expression = "MIT OR Apache-2.0"
+license-files = []
+name = "wgpu-types"
+
+[[licenses.clarify]] # https://github.com/gfx-rs/wgpu/issues/1473
+expression = "MIT OR Apache-2.0"
+license-files = []
+name = "wgpu"
+
+[bans]
+allow = []
+deny = []
+highlight = "all"
+multiple-versions = "deny"
+skip = [
+  {name = "android_log-sys", version = "0.1"},
+  {name = "cfg-if", version = "0.1"}, # https://github.com/rustwasm/console_error_panic_hook/pull/18
+  {name = "glam", version = "0.13.0"}, # Hexasphere/bevy_math mismatch
+  {name = "libm", version = "0.1"},
+  {name = "ndk", version = "0.2"},
+  {name = "ndk-glue", version = "0.2"},
+  {name = "num_enum", version = "0.4"},
+  {name = "num_enum_derive", version = "0.4"},
+  {name = "proc-macro-crate", version = "0.1"},
+  {name = "strsim", version = "0.9.3"}, # Used by ndk-glue (which is for android)
+]
+wildcards = "deny"
+
+[sources]
+allow-git = []
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+unknown-git = "deny"
+unknown-registry = "deny"
