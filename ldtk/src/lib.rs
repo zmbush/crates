@@ -102,3 +102,15 @@ impl Clone for FieldInstance {
         }
     }
 }
+
+impl Clone for TileInstance {
+    fn clone(&self) -> Self {
+        Self {
+            d: self.d.clone(),
+            f: self.f.clone(),
+            px: self.px.clone(),
+            src: self.src.clone(),
+            t: self.t.clone(),
+        }
+    }
+}

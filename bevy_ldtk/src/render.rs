@@ -109,7 +109,15 @@ pub fn ldtk_entity_cleanup(
         }
     }
 }
-#[derive(Debug)]
+#[non_exhaustive]
+pub struct AttachEnumsEvent {
+    pub project: Handle<LdtkProject>,
+    pub tileset_uid: i64,
+    pub tile: TileInstance,
+    pub entity_id: Entity,
+}
+
+#[non_exhaustive]
 pub struct EntitySpawn {
     pub project: Handle<LdtkProject>,
     pub translation: Vec3,
@@ -122,6 +130,7 @@ pub fn render_ldtk_projects(
     mut commands: Commands,
     mut projects: Query<(&Handle<LdtkProject>, &mut LdtkProjectCfg, &Transform)>,
     mut entity_spawner: EventWriter<EntitySpawn>,
+    mut attach_enums: EventWriter<AttachEnumsEvent>,
     project_assets: Res<Assets<LdtkProject>>,
 ) {
     for (project_handle, mut project_cfg, transform) in projects.iter_mut() {
@@ -145,6 +154,7 @@ pub fn render_ldtk_projects(
                     project_handle,
                     project,
                     &mut entity_spawner,
+                    &mut attach_enums,
                 );
 
                 project_cfg.rendered = Some(current);
@@ -168,6 +178,7 @@ pub fn render_ldtk_projects(
                         project_handle,
                         project,
                         &mut entity_spawner,
+                        &mut attach_enums,
                     )
                 }
 
@@ -185,6 +196,7 @@ fn render_single_ldtk_level(
     project_handle: &Handle<LdtkProject>,
     project: &LdtkProject,
     entity_spawner: &mut EventWriter<EntitySpawn>,
+    attach_enums: &mut EventWriter<AttachEnumsEvent>,
 ) {
     debug!(
         "Beginning render pass for project at level {} ({})",
@@ -235,7 +247,10 @@ fn render_single_ldtk_level(
                                     layer_info,
                                     tile,
                                     builder,
-                                    project.spritesheets[&tileset_uid].clone(),
+                                    project,
+                                    tileset_uid,
+                                    project_handle.clone(),
+                                    attach_enums,
                                 );
                             }
                         }
@@ -247,7 +262,10 @@ fn render_single_ldtk_level(
                                     layer_info,
                                     tile,
                                     builder,
-                                    project.spritesheets[&tileset_uid].clone(),
+                                    project,
+                                    tileset_uid,
+                                    project_handle.clone(),
+                                    attach_enums,
                                 );
                             }
                         }
@@ -260,7 +278,10 @@ fn render_single_ldtk_level(
                                         layer_info,
                                         tile,
                                         builder,
-                                        project.spritesheets[&i].clone(),
+                                        project,
+                                        i,
+                                        project_handle.clone(),
+                                        attach_enums,
                                     );
                                 }
                             }
@@ -322,12 +343,18 @@ fn display_tile(
     layer_info: LayerInfo,
     tile: &TileInstance,
     builder: &mut ChildBuilder,
-    handle: Handle<TextureAtlas>,
+    project: &LdtkProject,
+    tileset_uid: i64,
+    project_handle: Handle<LdtkProject>,
+    attach_enums: &mut EventWriter<AttachEnumsEvent>,
 ) {
     let flip_x = (tile.f & 0b01) != 0;
     let flip_y = (tile.f & 0b10) != 0;
 
-    builder.spawn().insert_bundle(SpriteSheetBundle {
+    let handle = project.spritesheets[&tileset_uid].clone();
+
+    let mut commands = builder.spawn();
+    commands.insert_bundle(SpriteSheetBundle {
         transform: Transform {
             translation: convert_to_world(
                 layer_info.grid_cell_size,
@@ -346,6 +373,13 @@ fn display_tile(
         },
         texture_atlas: handle,
         ..Default::default()
+    });
+
+    attach_enums.send(AttachEnumsEvent {
+        project: project_handle,
+        tileset_uid,
+        entity_id: commands.id(),
+        tile: (*tile).clone(),
     });
 }
 

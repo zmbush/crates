@@ -4,7 +4,7 @@ mod assets;
 mod render;
 
 pub use assets::LdtkProject;
-pub use render::{EntitySpawn, LdtkProjectBundle, LdtkProjectCfg, LdtkRenderType};
+pub use render::{AttachEnumsEvent, EntitySpawn, LdtkProjectBundle, LdtkProjectCfg, LdtkRenderType};
 
 #[derive(Debug)]
 pub struct LdtkPlugin;
@@ -18,6 +18,7 @@ impl Plugin for LdtkPlugin {
         app.add_asset::<assets::LdtkProject>()
             .init_asset_loader::<assets::LdtkProjectLoader>()
             .add_event::<render::EntitySpawn>()
+            .add_event::<render::AttachEnumsEvent>()
             .add_system(render::render_ldtk_projects.system().label(LDTK_RENDER))
             .add_system(
                 render::ldtk_entity_cleanup
