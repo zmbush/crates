@@ -14,7 +14,7 @@ pub static LDTK_CLEANUP: &str = "ldtk_cleanup";
 pub static LDTK_HOT_RELOAD: &str = "ldtk_hot_reload";
 
 impl Plugin for LdtkPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_asset::<assets::LdtkProject>()
             .init_asset_loader::<assets::LdtkProjectLoader>()
             .add_event::<render::EntitySpawn>()
